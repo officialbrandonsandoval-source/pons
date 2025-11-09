@@ -2,6 +2,7 @@ import { chat } from '@/lib/openai'
 import { defaultPrompt } from '@/core/prompts/defaultPrompt'
 import { handleSchedule, handleCRM, handleContent } from './handlers'
 import { InsightsEngine } from './insights'
+import { PredictiveInsightsEngine } from './predictiveInsights'
 
 // In-memory conversation history (in production, use a database)
 const conversationHistory: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
@@ -20,6 +21,102 @@ export async function ponsAgent(input: string) {
       if (personalContext) {
         conversationHistory[0].content = defaultPrompt + personalContext
         personalContextAdded = true
+      }
+    }
+
+    // Check for predictive insights command
+    if (
+      input.toLowerCase().includes('predict') ||
+      input.toLowerCase().includes('forecast') ||
+      input.toLowerCase().includes('what will happen') ||
+      input.toLowerCase().includes('give me insights')
+    ) {
+      try {
+        const predictiveEngine = new PredictiveInsightsEngine()
+        const insights = await predictiveEngine.generateInsights()
+        
+        let response = "📊 Here are your predictive insights:\n\n"
+        
+        // High priority insights
+        const highPriority = insights.insights.filter(i => i.priority === 'high')
+        if (highPriority.length > 0) {
+          response += "🔴 HIGH PRIORITY:\n"
+          highPriority.forEach(insight => {
+            response += `• ${insight.insight}\n`
+            if (insight.actions && insight.actions.length > 0) {
+              response += `  Actions: ${insight.actions.join(', ')}\n`
+            }
+          })
+          response += "\n"
+        }
+        
+        // Predictions
+        if (insights.predictions.nextWeek.length > 0) {
+          response += "🔮 NEXT WEEK PREDICTIONS:\n"
+          insights.predictions.nextWeek.forEach(pred => {
+            response += `• ${pred}\n`
+          })
+          response += "\n"
+        }
+        
+        // Opportunities
+        if (insights.predictions.opportunities.length > 0) {
+          response += "✨ OPPORTUNITIES:\n"
+          insights.predictions.opportunities.forEach(opp => {
+            response += `• ${opp}\n`
+          })
+          response += "\n"
+        }
+        
+        // Immediate recommendations
+        if (insights.recommendations.immediate.length > 0) {
+          response += "⚡ DO NOW:\n"
+          insights.recommendations.immediate.forEach(rec => {
+            response += `• ${rec}\n`
+          })
+        }
+        
+        conversationHistory.push({ role: 'user', content: input })
+        conversationHistory.push({ role: 'assistant', content: response })
+        return response
+      } catch (error) {
+        console.error('Predictive insights error:', error)
+      }
+    }
+
+    // Check for smart suggestions command
+    if (
+      input.toLowerCase().includes('suggest') ||
+      input.toLowerCase().includes('what should i') ||
+      input.toLowerCase().includes('recommend')
+    ) {
+      try {
+        const predictiveEngine = new PredictiveInsightsEngine()
+        const now = new Date()
+        const hour = now.getHours()
+        const day = now.toLocaleDateString('en-US', { weekday: 'long' })
+        
+        let timeOfDay = 'morning'
+        if (hour >= 12 && hour < 17) timeOfDay = 'afternoon'
+        else if (hour >= 17) timeOfDay = 'evening'
+        
+        const suggestions = await predictiveEngine.generateSmartSuggestions({
+          timeOfDay,
+          dayOfWeek: day,
+          recentActivity: [],
+          upcomingEvents: [],
+        })
+        
+        let response = `💡 Smart suggestions for ${day} ${timeOfDay}:\n\n`
+        suggestions.forEach((suggestion, index) => {
+          response += `${index + 1}. ${suggestion}\n`
+        })
+        
+        conversationHistory.push({ role: 'user', content: input })
+        conversationHistory.push({ role: 'assistant', content: response })
+        return response
+      } catch (error) {
+        console.error('Smart suggestions error:', error)
       }
     }
 
