@@ -1,5 +1,7 @@
 'use client'
 
+import SyncStatus from '@/components/SyncStatus'
+
 export default function Dashboard() {
   return (
     <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 min-h-screen">
@@ -72,17 +74,23 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            ⚡ Quick Actions
-          </h2>
-          <div className="space-y-3">
-            <QuickAction icon="💬" label="Chat with AI" href="/copilot" />
-            <QuickAction icon="📝" label="Create Content" href="/content" />
-            <QuickAction icon="✅" label="Add Task" href="/tasks" />
-            <QuickAction icon="👥" label="Check CRM" href="/crm" />
-            <QuickAction icon="📊" label="View Projects" href="/projects" />
+        {/* Quick Actions & Sync Status */}
+        <div className="space-y-6">
+          {/* Sync Status */}
+          <SyncStatus />
+          
+          {/* Quick Actions */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              ⚡ Quick Actions
+            </h2>
+            <div className="space-y-3">
+              <QuickAction icon="💬" label="Chat with AI" href="/copilot" />
+              <QuickAction icon="📝" label="Create Content" href="/content" />
+              <QuickAction icon="✅" label="Add Task" href="/tasks" />
+              <QuickAction icon="👥" label="Check CRM" href="/crm" />
+              <QuickAction icon="📊" label="View Projects" href="/projects" />
+            </div>
           </div>
         </div>
       </div>

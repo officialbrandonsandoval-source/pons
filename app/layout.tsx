@@ -1,5 +1,6 @@
 import '../styles/globals.css'
 import Sidebar from '@/components/Sidebar'
+import SyncNotifications from '@/components/SyncNotifications'
 
 export default function RootLayout({
   children,
@@ -13,6 +14,7 @@ export default function RootLayout({
           <Sidebar />
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
+        <SyncNotifications />
       </body>
     </html>
   )
