@@ -1,0 +1,42 @@
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+:root {
+  /* Shiftly Blue Theme Colors */
+  --shiftly-blue: #0ea5e9;
+  --charcoal: #1e293b;
+  --snow-white: #f1f5f9;
+  --steel-grey: #94a3b8;
+}
+
+* {
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  @apply bg-snow-white dark:bg-charcoal text-charcoal dark:text-snow-white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-steel-grey/50 rounded-full hover:bg-steel-grey;
+}
+
+/* Smooth transitions for dark mode */
+* {
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}

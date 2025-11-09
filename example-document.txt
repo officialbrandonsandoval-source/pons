@@ -1,0 +1,50 @@
+PONS AI Assistant - Feature Overview
+
+PONS is an advanced personal AI assistant designed to help you manage your digital life, integrate your personal data, and provide intelligent insights.
+
+Key Features:
+
+1. Personal Integrations
+   - Connect social media accounts (Twitter, Instagram, LinkedIn, Facebook)
+   - Link financial accounts via Plaid
+   - Sync calendar and email
+   - Aggregate health and fitness data
+
+2. Document Knowledge Base
+   - Upload documents to create a personal knowledge base
+   - Ask questions about your documents using natural language
+   - Vector-based semantic search for relevant information
+   - Supports TXT, MD, and JSON formats
+
+3. AI-Powered Insights
+   - Analyze social media presence and engagement
+   - Track financial health and spending patterns
+   - Generate personalized recommendations
+   - Identify trends and patterns in your data
+
+4. Smart Task Management
+   - Schedule meetings and events
+   - Manage CRM contacts and leads
+   - Create and organize content
+   - Set reminders and follow-ups
+
+5. Privacy & Security
+   - All data stored securely in Supabase
+   - OpenAI API for AI processing
+   - Local storage for preferences
+   - No data shared with third parties
+
+Getting Started:
+1. Configure your integrations in Settings
+2. Upload documents to Vault
+3. Start chatting with PONS in Copilot
+4. Ask questions about your documents or request insights
+
+Example Questions:
+- "What are the key features of PONS?"
+- "Analyze my social media presence"
+- "What's in my documents about integrations?"
+- "Give me financial insights"
+- "Schedule a meeting for tomorrow"
+
+PONS learns from your data to provide increasingly personalized and helpful assistance over time.
