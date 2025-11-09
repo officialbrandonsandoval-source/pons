@@ -26,7 +26,27 @@ export default function SignInPage() {
       setError('Invalid credentials')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push('/')
+      router.refresh()
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    setLoading(true)
+    setError('')
+    
+    const result = await signIn('credentials', {
+      email: 'demo@pons.ai',
+      password: 'demo123456',
+      redirect: false,
+    })
+
+    if (result?.error) {
+      setError('Demo account not available. Please sign up.')
+      setLoading(false)
+    } else {
+      router.push('/')
+      router.refresh()
     }
   }
 
@@ -79,6 +99,15 @@ export default function SignInPage() {
             className="w-full py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Try Demo Account
           </button>
         </form>
 

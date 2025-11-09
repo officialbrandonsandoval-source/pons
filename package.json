@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.38.0",
     "langchain": "^1.0.3",
+    "lucide-react": "^0.553.0",
     "next": "latest",
     "next-auth": "^4.24.13",
     "openai": "^4.20.0",

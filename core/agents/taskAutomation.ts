@@ -1,9 +1,11 @@
 import OpenAI from 'openai'
 import { IntegrationManager } from '@/lib/integrations/manager'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  })
+}
 
 interface DetectedTask {
   id: string
@@ -91,6 +93,7 @@ For each task, provide:
 
 Return as JSON array of tasks.`
 
+    const openai = getOpenAIClient()
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -303,6 +306,7 @@ ${JSON.stringify(tasks, null, 2)}
 
 Return the tasks in prioritized order as JSON array.`
 
+    const openai = getOpenAIClient()
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [

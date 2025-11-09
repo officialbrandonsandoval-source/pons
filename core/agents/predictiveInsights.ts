@@ -1,9 +1,11 @@
 import OpenAI from 'openai'
 import { IntegrationManager } from '@/lib/integrations/manager'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  })
+}
 
 interface InsightCategory {
   category: 'social' | 'financial' | 'productivity' | 'health' | 'general'
@@ -83,6 +85,7 @@ Identify:
 
 Format response as JSON with arrays: behavioral, temporal, correlations`
 
+    const openai = getOpenAIClient()
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -115,6 +118,7 @@ Predict:
 
 Format as JSON with arrays for each category.`
 
+    const openai = getOpenAIClient()
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -147,6 +151,7 @@ Provide recommendations in three timeframes:
 
 Format as JSON with arrays for immediate, shortTerm, longTerm.`
 
+    const openai = getOpenAIClient()
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -302,7 +307,7 @@ Format as JSON with arrays for immediate, shortTerm, longTerm.`
       const avgSpending = historicalData.reduce((sum, d) => sum + (d.dailySpending || 0), 0) / historicalData.length
       const currentSpending = currentData.dailySpending || 0
       
-      if (currentSpending > avgEngagement * 2) {
+      if (currentSpending > avgSpending * 2) {
         anomalies.push('Spending is unusually high today - more than 2x your daily average')
       }
     }
