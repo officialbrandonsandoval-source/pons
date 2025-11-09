@@ -1,6 +1,12 @@
 import '../styles/globals.css'
-import Sidebar from '@/components/Sidebar'
-import SyncNotifications from '@/components/SyncNotifications'
+import type { Metadata } from 'next'
+import { Providers } from './providers'
+
+export const metadata: Metadata = {
+  title: 'PONS AI OS - Your Intelligent Operating System',
+  description: 'AI-powered personal OS for life, work, and everything in between',
+  viewport: 'width=device-width, initial-scale=1',
+}
 
 export default function RootLayout({
   children,
@@ -9,12 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <div className='flex min-h-screen bg-gray-100 dark:bg-gray-950'>
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">{children}</main>
-        </div>
-        <SyncNotifications />
+      <body className="antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
