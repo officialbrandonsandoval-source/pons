@@ -51,15 +51,15 @@ export class TwitterAdapter implements ISocialMediaAdapter {
     const user = data.data
 
     return {
-      id: user.id,
-      platform: 'twitter',
-      username: user.username,
-      displayName: user.name,
-      followers: user.public_metrics.followers_count,
-      following: user.public_metrics.following_count,
-      bio: user.description,
-      profileImage: user.profile_image_url,
-      verified: user.verified || false,
+      id: user.open_id,
+      platform: 'tiktok',
+      username: user.display_name,
+      displayName: user.display_name,
+      followers: user.follower_count,
+      following: user.following_count,
+      bio: user.bio_description,
+      profileImage: user.avatar_url || '',
+      verified: user.is_verified || false,
     }
   }
 
@@ -87,27 +87,23 @@ export class TwitterAdapter implements ISocialMediaAdapter {
     })) || []
   }
 
-  async getAnalytics(days = 30): Promise<SocialAnalytics> {
+  async getAnalytics(days: number = 30): Promise<SocialAnalytics> {
     const posts = await this.getPosts(100)
-    const recentPosts = posts.filter(p => 
-      p.timestamp > new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-    )
-
-    const totalEngagement = recentPosts.reduce((sum, p) => sum + p.engagement, 0)
-    const avgLikes = recentPosts.reduce((sum, p) => sum + p.likes, 0) / recentPosts.length || 0
-
-    const topPosts = [...recentPosts]
-      .sort((a, b) => b.engagement - a.engagement)
-      .slice(0, 5)
-
+    const profile = await this.getProfile()
+    
+    // Sum up all engagement metrics
+    const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0)
+    const totalComments = posts.reduce((sum, post) => sum + post.comments, 0)
+    const totalShares = posts.reduce((sum, post) => sum + post.shares, 0)
+    
     return {
-      platform: 'twitter',
-      totalPosts: recentPosts.length,
-      totalEngagement,
-      averageLikes: Math.round(avgLikes),
-      topPosts,
-      bestPostingTimes: ['9:00 AM', '12:00 PM', '5:00 PM'], // Would calculate from data
-      audienceGrowth: 0, // Would need historical data
+      platform: 'tiktok',
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments + totalShares,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
+      topPosts: posts.sort((a, b) => b.engagement - a.engagement).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -173,7 +169,7 @@ export class InstagramAdapter implements ISocialMediaAdapter {
     }
 
     this.accessToken = config.accessToken || ''
-    this.userId = config.userId || ''
+    // this.userId would need to be fetched from Instagram API or passed separately
     this.connected = !!this.accessToken
     return this.connected
   }
@@ -197,15 +193,14 @@ export class InstagramAdapter implements ISocialMediaAdapter {
 
     return {
       id: data.id,
+      platform: 'instagram',
       username: data.username,
       displayName: data.username,
       bio: '',
-      followersCount: data.followers_count || 0,
-      followingCount: data.follows_count || 0,
-      postsCount: data.media_count || 0,
+      followers: data.followers_count || 0,
+      following: data.follows_count || 0,
       verified: false,
-      avatarUrl: '',
-      platform: 'instagram',
+      profileImage: '',
     }
   }
 
@@ -219,15 +214,14 @@ export class InstagramAdapter implements ISocialMediaAdapter {
 
     return (data.data || []).map((post: any) => ({
       id: post.id,
+      platform: 'instagram' as const,
       content: post.caption || '',
-      createdAt: new Date(post.timestamp),
+      timestamp: new Date(post.timestamp),
       likes: post.like_count || 0,
       comments: post.comments_count || 0,
       shares: 0,
-      views: 0,
-      mediaUrls: [post.media_url],
-      platform: 'instagram' as const,
-      url: post.permalink,
+      engagement: (post.like_count || 0) + (post.comments_count || 0),
+      media: [post.media_url],
     }))
   }
 
@@ -242,12 +236,13 @@ export class InstagramAdapter implements ISocialMediaAdapter {
     const totalShares = posts.reduce((sum: number, p: SocialPost) => sum + p.shares, 0)
     
     return {
-      period: { start: new Date(Date.now() - days * 24 * 60 * 60 * 1000), end: new Date() },
-      impressions: 0,
-      engagement: totalLikes + totalComments + totalShares,
-      reach: profile.followersCount,
-      followers: profile.followersCount,
+      platform: 'instagram',
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments + totalShares,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
       topPosts: posts.sort((a, b) => b.likes - a.likes).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -290,15 +285,14 @@ export class InstagramAdapter implements ISocialMediaAdapter {
 
     return {
       id: publishData.id,
+      platform: 'instagram',
       content,
-      createdAt: new Date(),
+      timestamp: new Date(),
       likes: 0,
       comments: 0,
       shares: 0,
-      views: 0,
-      mediaUrls: media,
-      platform: 'instagram',
-      url: '',
+      engagement: 0,
+      media,
     }
   }
 
@@ -311,13 +305,14 @@ export class InstagramAdapter implements ISocialMediaAdapter {
   async getInsights(): Promise<any> {
     const analytics = await this.getAnalytics(30)
     const profile = await this.getProfile()
+    const posts = await this.getPosts(50)
     
     return {
       profile,
       analytics,
       insights: [
-        `You have ${profile.followersCount} followers`,
-        `Average engagement: ${(analytics.engagement / profile.postsCount).toFixed(1)} per post`,
+        `You have ${profile.followers} followers`,
+        `Average engagement: ${(analytics.totalEngagement / posts.length).toFixed(1)} per post`,
         `Top post has ${analytics.topPosts[0]?.likes || 0} likes`,
       ],
     }
@@ -336,7 +331,7 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
     }
 
     this.accessToken = config.accessToken || ''
-    this.userId = config.userId || ''
+    // this.userId would need to be fetched from LinkedIn API or passed separately
     this.connected = !!this.accessToken
     return this.connected
   }
@@ -373,15 +368,14 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
 
     return {
       id: data.id,
+      platform: 'linkedin',
       username: '',
       displayName: `${data.localizedFirstName} ${data.localizedLastName}`,
+      followers: 0,
+      following: connectionsData.paging?.total || 0,
       bio: '',
-      followersCount: 0,
-      followingCount: connectionsData.paging?.total || 0,
-      postsCount: 0,
+      profileImage: data.profilePicture?.displayImage || '',
       verified: false,
-      avatarUrl: data.profilePicture?.displayImage || '',
-      platform: 'linkedin',
     }
   }
 
@@ -400,15 +394,13 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
 
     return (data.elements || []).map((post: any) => ({
       id: post.id,
+      platform: 'linkedin' as const,
       content: post.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || '',
-      createdAt: new Date(post.created?.time || Date.now()),
+      timestamp: new Date(post.created?.time || Date.now()),
       likes: post.numLikes || 0,
       comments: post.numComments || 0,
       shares: post.numShares || 0,
-      views: 0,
-      mediaUrls: [],
-      platform: 'linkedin' as const,
-      url: `https://www.linkedin.com/feed/update/${post.id}`,
+      engagement: (post.numLikes || 0) + (post.numComments || 0) + (post.numShares || 0),
     }))
   }
 
@@ -423,12 +415,13 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
     const totalShares = posts.reduce((sum: number, p: SocialPost) => sum + p.shares, 0)
     
     return {
-      period: { start: new Date(Date.now() - days * 24 * 60 * 60 * 1000), end: new Date() },
-      impressions: 0,
-      engagement: totalLikes + totalComments + totalShares,
-      reach: profile.followingCount,
-      followers: profile.followersCount,
+      platform: 'linkedin',
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments + totalShares,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
       topPosts: posts.sort((a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -461,15 +454,14 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
 
     return {
       id: data.id,
+      platform: 'linkedin',
       content,
-      createdAt: new Date(),
+      timestamp: new Date(),
       likes: 0,
       comments: 0,
       shares: 0,
-      views: 0,
-      mediaUrls: media || [],
-      platform: 'linkedin',
-      url: `https://www.linkedin.com/feed/update/${data.id}`,
+      engagement: 0,
+      media: media || [],
     }
   }
 
@@ -487,8 +479,8 @@ export class LinkedInAdapter implements ISocialMediaAdapter {
       profile,
       analytics,
       insights: [
-        `You have ${profile.followingCount} connections`,
-        `Total engagement: ${analytics.engagement}`,
+        `You have ${profile.following} connections`,
+        `Total engagement: ${analytics.totalEngagement}`,
         `Best performing post: ${analytics.topPosts[0]?.content.substring(0, 50)}...`,
       ],
     }
@@ -530,15 +522,14 @@ export class FacebookAdapter implements ISocialMediaAdapter {
 
     return {
       id: data.id,
+      platform: 'facebook',
       username: data.id,
       displayName: data.name,
+      followers: 0,
+      following: data.friends?.summary?.total_count || 0,
       bio: '',
-      followersCount: 0,
-      followingCount: data.friends?.summary?.total_count || 0,
-      postsCount: data.posts?.data?.length || 0,
+      profileImage: data.picture?.data?.url || '',
       verified: false,
-      avatarUrl: data.picture?.data?.url || '',
-      platform: 'facebook',
     }
   }
 
@@ -552,15 +543,13 @@ export class FacebookAdapter implements ISocialMediaAdapter {
 
     return (data.data || []).map((post: any) => ({
       id: post.id,
+      platform: 'facebook' as const,
       content: post.message || '',
-      createdAt: new Date(post.created_time),
+      timestamp: new Date(post.created_time),
       likes: post.likes?.summary?.total_count || 0,
       comments: post.comments?.summary?.total_count || 0,
       shares: post.shares?.count || 0,
-      views: 0,
-      mediaUrls: [],
-      platform: 'facebook' as const,
-      url: `https://www.facebook.com/${post.id}`,
+      engagement: (post.likes?.summary?.total_count || 0) + (post.comments?.summary?.total_count || 0) + (post.shares?.count || 0),
     }))
   }
 
@@ -575,12 +564,13 @@ export class FacebookAdapter implements ISocialMediaAdapter {
     const totalShares = posts.reduce((sum: number, p: SocialPost) => sum + p.shares, 0)
     
     return {
-      period: { start: new Date(Date.now() - days * 24 * 60 * 60 * 1000), end: new Date() },
-      impressions: 0,
-      engagement: totalLikes + totalComments + totalShares,
-      reach: profile.followingCount,
-      followers: profile.followersCount,
+      platform: 'facebook',
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments + totalShares,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
       topPosts: posts.sort((a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -602,15 +592,14 @@ export class FacebookAdapter implements ISocialMediaAdapter {
 
     return {
       id: data.id,
+      platform: 'facebook',
       content,
-      createdAt: new Date(),
+      timestamp: new Date(),
       likes: 0,
       comments: 0,
       shares: 0,
-      views: 0,
-      mediaUrls: media || [],
-      platform: 'facebook',
-      url: `https://www.facebook.com/${data.id}`,
+      engagement: 0,
+      media: media || [],
     }
   }
 
@@ -628,8 +617,8 @@ export class FacebookAdapter implements ISocialMediaAdapter {
       profile,
       analytics,
       insights: [
-        `You have ${profile.followingCount} friends`,
-        `Total engagement: ${analytics.engagement} across all posts`,
+        `You have ${profile.following} friends`,
+        `Total engagement: ${analytics.totalEngagement}`,
         `Most engaged post: ${analytics.topPosts[0]?.content.substring(0, 50)}...`,
       ],
     }
@@ -638,9 +627,10 @@ export class FacebookAdapter implements ISocialMediaAdapter {
 
 // TikTok Adapter
 export class TikTokAdapter implements ISocialMediaAdapter {
+  private baseUrl = 'https://open-api.tiktok.com/v1'
   private accessToken: string = ''
-  private connected = false
-  private baseUrl = 'https://open.tiktokapis.com/v2'
+  private userId: string = ''
+  private connected: boolean = false
 
   async connect(config: IntegrationConfig): Promise<boolean> {
     if (config.type !== 'tiktok') {
@@ -687,15 +677,13 @@ export class TikTokAdapter implements ISocialMediaAdapter {
 
     return {
       id: user.open_id || 'unknown',
+      platform: 'tiktok',
       username: user.display_name || 'TikTok User',
       displayName: user.display_name || 'TikTok User',
       bio: user.bio_description || '',
-      avatarUrl: user.avatar_url || '',
+      profileImage: user.avatar_url || '',
       followers: user.follower_count || 0,
       following: user.following_count || 0,
-      posts: user.video_count || 0,
-      platform: 'tiktok',
-      url: `https://www.tiktok.com/@${user.display_name}`,
       verified: user.is_verified || false,
     }
   }
@@ -716,15 +704,14 @@ export class TikTokAdapter implements ISocialMediaAdapter {
     
     return (data.data?.videos || []).map((video: any) => ({
       id: video.id,
+      platform: 'tiktok',
       content: video.video_description || '',
       timestamp: new Date(video.create_time * 1000),
       likes: video.like_count || 0,
       comments: video.comment_count || 0,
       shares: video.share_count || 0,
-      views: video.view_count || 0,
-      mediaUrls: [video.cover_image_url],
-      platform: 'tiktok',
-      url: `https://www.tiktok.com/@${video.id}`,
+      engagement: (video.like_count || 0) + (video.comment_count || 0) + (video.share_count || 0),
+      media: [video.cover_image_url],
     }))
   }
 
@@ -737,16 +724,15 @@ export class TikTokAdapter implements ISocialMediaAdapter {
     const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0)
     const totalComments = posts.reduce((sum, post) => sum + post.comments, 0)
     const totalShares = posts.reduce((sum, post) => sum + post.shares, 0)
-    const totalViews = posts.reduce((sum, post) => sum + post.views, 0)
 
     return {
       platform: 'tiktok',
-      impressions: totalViews,
-      likes: totalLikes,
-      comments: totalComments,
-      shares: totalShares,
-      clicks: 0,
-      topPosts: posts.slice(0, 5),
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments + totalShares,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
+      topPosts: posts.sort((a, b) => b.engagement - a.engagement).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -768,10 +754,10 @@ export class TikTokAdapter implements ISocialMediaAdapter {
       profile,
       analytics,
       insights: [
-        `You have ${profile.followers} followers on TikTok`,
-        `Total views: ${analytics.impressions.toLocaleString()}`,
-        `Avg engagement rate: ${((analytics.likes + analytics.comments) / analytics.impressions * 100).toFixed(2)}%`,
-        `Most viral video: ${analytics.topPosts[0]?.views.toLocaleString()} views`,
+        `${profile.followers.toLocaleString()} followers on TikTok`,
+        `Total engagement: ${analytics.totalEngagement.toLocaleString()}`,
+        `Average ${analytics.averageLikes} likes per video`,
+        `Most viral video: ${analytics.topPosts[0]?.engagement.toLocaleString()} total engagement`,
       ],
     }
   }
@@ -838,15 +824,13 @@ export class YouTubeAdapter implements ISocialMediaAdapter {
 
     return {
       id: channel.id,
+      platform: 'youtube',
       username: channel.snippet.customUrl || channel.snippet.title,
       displayName: channel.snippet.title,
       bio: channel.snippet.description,
-      avatarUrl: channel.snippet.thumbnails.default.url,
+      profileImage: channel.snippet.thumbnails.default.url,
       followers: parseInt(channel.statistics.subscriberCount) || 0,
       following: 0,
-      posts: parseInt(channel.statistics.videoCount) || 0,
-      platform: 'youtube',
-      url: `https://www.youtube.com/channel/${channel.id}`,
       verified: false,
     }
   }
@@ -887,15 +871,14 @@ export class YouTubeAdapter implements ISocialMediaAdapter {
       const stats = statsData.items[index].statistics
       return {
         id: item.snippet.resourceId.videoId,
+        platform: 'youtube',
         content: item.snippet.title,
         timestamp: new Date(item.snippet.publishedAt),
         likes: parseInt(stats.likeCount) || 0,
         comments: parseInt(stats.commentCount) || 0,
         shares: 0,
-        views: parseInt(stats.viewCount) || 0,
-        mediaUrls: [item.snippet.thumbnails.default.url],
-        platform: 'youtube',
-        url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+        engagement: parseInt(stats.likeCount) + parseInt(stats.commentCount) || 0,
+        media: [item.snippet.thumbnails.default.url],
       }
     })
   }
@@ -906,18 +889,17 @@ export class YouTubeAdapter implements ISocialMediaAdapter {
     const posts = await this.getPosts(50)
     const profile = await this.getProfile()
 
-    const totalViews = posts.reduce((sum, post) => sum + post.views, 0)
     const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0)
     const totalComments = posts.reduce((sum, post) => sum + post.comments, 0)
 
     return {
       platform: 'youtube',
-      impressions: totalViews,
-      likes: totalLikes,
-      comments: totalComments,
-      shares: 0,
-      clicks: 0,
-      topPosts: posts.sort((a, b) => b.views - a.views).slice(0, 5),
+      totalPosts: posts.length,
+      totalEngagement: totalLikes + totalComments,
+      averageLikes: posts.length > 0 ? Math.round(totalLikes / posts.length) : 0,
+      topPosts: posts.sort((a, b) => b.engagement - a.engagement).slice(0, 5),
+      bestPostingTimes: [],
+      audienceGrowth: 0,
     }
   }
 
@@ -939,11 +921,10 @@ export class YouTubeAdapter implements ISocialMediaAdapter {
       profile,
       analytics,
       insights: [
-        `Channel: ${profile.followers.toLocaleString()} subscribers`,
-        `Total views: ${analytics.impressions.toLocaleString()}`,
-        `${profile.posts} videos published`,
-        `Avg views per video: ${(analytics.impressions / profile.posts).toLocaleString()}`,
-        `Top video: ${analytics.topPosts[0]?.views.toLocaleString()} views`,
+        `${profile.followers.toLocaleString()} subscribers`,
+        `Total engagement: ${analytics.totalEngagement.toLocaleString()}`,
+        `Average ${analytics.averageLikes} likes per video`,
+        `Most popular video: ${analytics.topPosts[0]?.engagement.toLocaleString()} total engagement`,
       ],
     }
   }

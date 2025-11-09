@@ -94,10 +94,10 @@ export class IntegrationManager {
         try {
           const profile = await adapter.getProfile()
           socialProfiles.push(profile)
-          totalFollowers += profile.followersCount
+          totalFollowers += profile.followers
           
           const analytics = await adapter.getAnalytics(30)
-          totalEngagement += analytics.engagement
+          totalEngagement += analytics.totalEngagement
         } catch (error) {
           console.error(`Failed to fetch ${type} data:`, error)
         }
