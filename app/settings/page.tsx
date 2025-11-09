@@ -252,18 +252,19 @@ export default function SettingsPage() {
                   <option value="instagram">Instagram</option>
                   <option value="linkedin">LinkedIn</option>
                   <option value="facebook">Facebook</option>
-                  <option value="tiktok">TikTok (Coming Soon)</option>
-                  <option value="youtube">YouTube (Coming Soon)</option>
+                  <option value="tiktok">TikTok ✨</option>
+                  <option value="youtube">YouTube ✨</option>
                 </optgroup>
                 <optgroup label="Financial">
                   <option value="plaid">Plaid (Banking)</option>
-                  <option value="stripe">Stripe (Coming Soon)</option>
-                  <option value="paypal">PayPal (Coming Soon)</option>
+                  <option value="stripe">Stripe ✨</option>
+                  <option value="paypal">PayPal ✨</option>
                 </optgroup>
                 <optgroup label="Productivity">
-                  <option value="google-calendar">Google Calendar (Coming Soon)</option>
-                  <option value="notion">Notion (Coming Soon)</option>
-                  <option value="github">GitHub (Coming Soon)</option>
+                  <option value="google-calendar">Google Calendar ✨</option>
+                  <option value="notion">Notion ✨</option>
+                  <option value="gmail">Gmail ✨</option>
+                  <option value="spotify">Spotify ✨</option>
                 </optgroup>
               </select>
             </div>
@@ -284,7 +285,15 @@ export default function SettingsPage() {
                 {selectedIntegrationType === 'instagram' && 'Get your token from Facebook Developer Portal'}
                 {selectedIntegrationType === 'linkedin' && 'Get your token from LinkedIn Developer Portal'}
                 {selectedIntegrationType === 'facebook' && 'Get your token from Facebook Developer Portal'}
+                {selectedIntegrationType === 'tiktok' && 'Get your token from TikTok Developer Portal'}
+                {selectedIntegrationType === 'youtube' && 'Get your OAuth token from Google Cloud Console'}
                 {selectedIntegrationType === 'plaid' && 'Get your access token from Plaid Dashboard'}
+                {selectedIntegrationType === 'stripe' && 'Get your secret key from Stripe Dashboard'}
+                {selectedIntegrationType === 'paypal' && 'Get your access token from PayPal Developer'}
+                {selectedIntegrationType === 'google-calendar' && 'Get your OAuth token from Google Cloud Console'}
+                {selectedIntegrationType === 'notion' && 'Get your integration token from Notion Integrations'}
+                {selectedIntegrationType === 'gmail' && 'Get your OAuth token from Google Cloud Console'}
+                {selectedIntegrationType === 'spotify' && 'Get your OAuth token from Spotify Developer Dashboard'}
               </p>
             </div>
 

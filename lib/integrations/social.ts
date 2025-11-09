@@ -635,3 +635,316 @@ export class FacebookAdapter implements ISocialMediaAdapter {
     }
   }
 }
+
+// TikTok Adapter
+export class TikTokAdapter implements ISocialMediaAdapter {
+  private accessToken: string = ''
+  private connected = false
+  private baseUrl = 'https://open.tiktokapis.com/v2'
+
+  async connect(config: IntegrationConfig): Promise<boolean> {
+    if (config.type !== 'tiktok') {
+      throw new Error('Invalid integration type for TikTok adapter')
+    }
+
+    this.accessToken = config.accessToken || ''
+    
+    try {
+      // Test connection by fetching user info
+      const response = await fetch(`${this.baseUrl}/user/info/`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      this.connected = response.ok
+      return this.connected
+    } catch (error) {
+      console.error('TikTok connection failed:', error)
+      return false
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    this.connected = false
+    this.accessToken = ''
+  }
+
+  isConnected(): boolean {
+    return this.connected
+  }
+
+  async getProfile(): Promise<SocialProfile> {
+    if (!this.connected) throw new Error('Not connected to TikTok')
+
+    const response = await fetch(`${this.baseUrl}/user/info/?fields=display_name,avatar_url,follower_count,following_count,likes_count,video_count`, {
+      headers: { 'Authorization': `Bearer ${this.accessToken}` },
+    })
+
+    const data = await response.json()
+    const user = data.data.user
+
+    return {
+      id: user.open_id || 'unknown',
+      username: user.display_name || 'TikTok User',
+      displayName: user.display_name || 'TikTok User',
+      bio: user.bio_description || '',
+      avatarUrl: user.avatar_url || '',
+      followers: user.follower_count || 0,
+      following: user.following_count || 0,
+      posts: user.video_count || 0,
+      platform: 'tiktok',
+      url: `https://www.tiktok.com/@${user.display_name}`,
+      verified: user.is_verified || false,
+    }
+  }
+
+  async getPosts(limit: number = 20): Promise<SocialPost[]> {
+    if (!this.connected) throw new Error('Not connected to TikTok')
+
+    const response = await fetch(`${this.baseUrl}/video/list/?fields=id,title,cover_image_url,video_description,duration,height,width,view_count,like_count,comment_count,share_count,create_time`, {
+      headers: { 
+        'Authorization': `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+      body: JSON.stringify({ max_count: limit }),
+    })
+
+    const data = await response.json()
+    
+    return (data.data?.videos || []).map((video: any) => ({
+      id: video.id,
+      content: video.video_description || '',
+      timestamp: new Date(video.create_time * 1000),
+      likes: video.like_count || 0,
+      comments: video.comment_count || 0,
+      shares: video.share_count || 0,
+      views: video.view_count || 0,
+      mediaUrls: [video.cover_image_url],
+      platform: 'tiktok',
+      url: `https://www.tiktok.com/@${video.id}`,
+    }))
+  }
+
+  async getAnalytics(days: number = 30): Promise<SocialAnalytics> {
+    if (!this.connected) throw new Error('Not connected to TikTok')
+
+    const profile = await this.getProfile()
+    const posts = await this.getPosts(50)
+
+    const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0)
+    const totalComments = posts.reduce((sum, post) => sum + post.comments, 0)
+    const totalShares = posts.reduce((sum, post) => sum + post.shares, 0)
+    const totalViews = posts.reduce((sum, post) => sum + post.views, 0)
+
+    return {
+      platform: 'tiktok',
+      impressions: totalViews,
+      likes: totalLikes,
+      comments: totalComments,
+      shares: totalShares,
+      clicks: 0,
+      topPosts: posts.slice(0, 5),
+    }
+  }
+
+  async createPost(content: string, media?: string[]): Promise<SocialPost> {
+    throw new Error('TikTok posting requires video upload - not supported via simple API')
+  }
+
+  async sync(): Promise<void> {
+    await this.getProfile()
+    await this.getPosts(50)
+    await this.getAnalytics(30)
+  }
+
+  async getInsights(): Promise<any> {
+    const analytics = await this.getAnalytics(30)
+    const profile = await this.getProfile()
+    
+    return {
+      profile,
+      analytics,
+      insights: [
+        `You have ${profile.followers} followers on TikTok`,
+        `Total views: ${analytics.impressions.toLocaleString()}`,
+        `Avg engagement rate: ${((analytics.likes + analytics.comments) / analytics.impressions * 100).toFixed(2)}%`,
+        `Most viral video: ${analytics.topPosts[0]?.views.toLocaleString()} views`,
+      ],
+    }
+  }
+}
+
+// YouTube Adapter
+export class YouTubeAdapter implements ISocialMediaAdapter {
+  private accessToken: string = ''
+  private connected = false
+  private baseUrl = 'https://www.googleapis.com/youtube/v3'
+  private channelId: string = ''
+
+  async connect(config: IntegrationConfig): Promise<boolean> {
+    if (config.type !== 'youtube') {
+      throw new Error('Invalid integration type for YouTube adapter')
+    }
+
+    this.accessToken = config.accessToken || ''
+    
+    try {
+      // Get channel info
+      const response = await fetch(`${this.baseUrl}/channels?part=snippet,statistics&mine=true`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+        },
+      })
+      
+      const data = await response.json()
+      if (data.items && data.items.length > 0) {
+        this.channelId = data.items[0].id
+        this.connected = true
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('YouTube connection failed:', error)
+      return false
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    this.connected = false
+    this.accessToken = ''
+    this.channelId = ''
+  }
+
+  isConnected(): boolean {
+    return this.connected
+  }
+
+  async getProfile(): Promise<SocialProfile> {
+    if (!this.connected) throw new Error('Not connected to YouTube')
+
+    const response = await fetch(
+      `${this.baseUrl}/channels?part=snippet,statistics&id=${this.channelId}`,
+      {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` },
+      }
+    )
+
+    const data = await response.json()
+    const channel = data.items[0]
+
+    return {
+      id: channel.id,
+      username: channel.snippet.customUrl || channel.snippet.title,
+      displayName: channel.snippet.title,
+      bio: channel.snippet.description,
+      avatarUrl: channel.snippet.thumbnails.default.url,
+      followers: parseInt(channel.statistics.subscriberCount) || 0,
+      following: 0,
+      posts: parseInt(channel.statistics.videoCount) || 0,
+      platform: 'youtube',
+      url: `https://www.youtube.com/channel/${channel.id}`,
+      verified: false,
+    }
+  }
+
+  async getPosts(limit: number = 20): Promise<SocialPost[]> {
+    if (!this.connected) throw new Error('Not connected to YouTube')
+
+    // Get uploads playlist
+    const channelResponse = await fetch(
+      `${this.baseUrl}/channels?part=contentDetails&id=${this.channelId}`,
+      {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` },
+      }
+    )
+    const channelData = await channelResponse.json()
+    const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads
+
+    // Get videos from uploads playlist
+    const videosResponse = await fetch(
+      `${this.baseUrl}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=${limit}`,
+      {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` },
+      }
+    )
+    const videosData = await videosResponse.json()
+
+    // Get video statistics
+    const videoIds = videosData.items.map((item: any) => item.snippet.resourceId.videoId).join(',')
+    const statsResponse = await fetch(
+      `${this.baseUrl}/videos?part=statistics&id=${videoIds}`,
+      {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` },
+      }
+    )
+    const statsData = await statsResponse.json()
+
+    return videosData.items.map((item: any, index: number) => {
+      const stats = statsData.items[index].statistics
+      return {
+        id: item.snippet.resourceId.videoId,
+        content: item.snippet.title,
+        timestamp: new Date(item.snippet.publishedAt),
+        likes: parseInt(stats.likeCount) || 0,
+        comments: parseInt(stats.commentCount) || 0,
+        shares: 0,
+        views: parseInt(stats.viewCount) || 0,
+        mediaUrls: [item.snippet.thumbnails.default.url],
+        platform: 'youtube',
+        url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+      }
+    })
+  }
+
+  async getAnalytics(days: number = 30): Promise<SocialAnalytics> {
+    if (!this.connected) throw new Error('Not connected to YouTube')
+
+    const posts = await this.getPosts(50)
+    const profile = await this.getProfile()
+
+    const totalViews = posts.reduce((sum, post) => sum + post.views, 0)
+    const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0)
+    const totalComments = posts.reduce((sum, post) => sum + post.comments, 0)
+
+    return {
+      platform: 'youtube',
+      impressions: totalViews,
+      likes: totalLikes,
+      comments: totalComments,
+      shares: 0,
+      clicks: 0,
+      topPosts: posts.sort((a, b) => b.views - a.views).slice(0, 5),
+    }
+  }
+
+  async createPost(content: string, media?: string[]): Promise<SocialPost> {
+    throw new Error('YouTube video upload requires complex multipart upload - use YouTube Studio')
+  }
+
+  async sync(): Promise<void> {
+    await this.getProfile()
+    await this.getPosts(50)
+    await this.getAnalytics(30)
+  }
+
+  async getInsights(): Promise<any> {
+    const analytics = await this.getAnalytics(30)
+    const profile = await this.getProfile()
+    
+    return {
+      profile,
+      analytics,
+      insights: [
+        `Channel: ${profile.followers.toLocaleString()} subscribers`,
+        `Total views: ${analytics.impressions.toLocaleString()}`,
+        `${profile.posts} videos published`,
+        `Avg views per video: ${(analytics.impressions / profile.posts).toLocaleString()}`,
+        `Top video: ${analytics.topPosts[0]?.views.toLocaleString()} views`,
+      ],
+    }
+  }
+}

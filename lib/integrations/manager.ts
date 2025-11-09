@@ -1,6 +1,7 @@
 import { IntegrationConfig, IIntegrationAdapter, ISocialMediaAdapter, IFinancialAdapter, PersonalInsights } from '@/types/integrations'
-import { TwitterAdapter, InstagramAdapter, LinkedInAdapter, FacebookAdapter } from './social'
-import { PlaidAdapter } from './financial'
+import { TwitterAdapter, InstagramAdapter, LinkedInAdapter, FacebookAdapter, TikTokAdapter, YouTubeAdapter } from './social'
+import { PlaidAdapter, StripeAdapter, PayPalAdapter } from './financial'
+import { GoogleCalendarAdapter, NotionAdapter, GmailAdapter, SpotifyAdapter } from './productivity'
 
 export class IntegrationManager {
   private static instance: IntegrationManager
@@ -50,12 +51,16 @@ export class IntegrationManager {
     return this.integrations.get(type)
   }
 
-  getSocialAdapter(type: 'twitter' | 'instagram' | 'linkedin' | 'facebook'): ISocialMediaAdapter | undefined {
+  getSocialAdapter(type: 'twitter' | 'instagram' | 'linkedin' | 'facebook' | 'tiktok' | 'youtube'): ISocialMediaAdapter | undefined {
     return this.integrations.get(type) as ISocialMediaAdapter
   }
 
-  getFinancialAdapter(type: 'plaid'): IFinancialAdapter | undefined {
+  getFinancialAdapter(type: 'plaid' | 'stripe' | 'paypal'): IFinancialAdapter | undefined {
     return this.integrations.get(type) as IFinancialAdapter
+  }
+
+  getProductivityAdapter(type: 'google-calendar' | 'notion' | 'gmail' | 'spotify'): any | undefined {
+    return this.integrations.get(type)
   }
 
   isConnected(type: string): boolean {
@@ -137,8 +142,24 @@ export class IntegrationManager {
         return new LinkedInAdapter()
       case 'facebook':
         return new FacebookAdapter()
+      case 'tiktok':
+        return new TikTokAdapter()
+      case 'youtube':
+        return new YouTubeAdapter()
       case 'plaid':
         return new PlaidAdapter()
+      case 'stripe':
+        return new StripeAdapter()
+      case 'paypal':
+        return new PayPalAdapter()
+      case 'google-calendar':
+        return new GoogleCalendarAdapter()
+      case 'notion':
+        return new NotionAdapter()
+      case 'gmail':
+        return new GmailAdapter()
+      case 'spotify':
+        return new SpotifyAdapter()
       default:
         throw new Error(`Unknown integration type: ${type}`)
     }
