@@ -23,6 +23,33 @@ export async function ponsAgent(input: string) {
       }
     }
 
+    // Check for "remember this" command
+    const rememberPattern = /remember (?:this|that):?\s*(.+)/i
+    const rememberMatch = input.match(rememberPattern)
+    
+    if (rememberMatch) {
+      const contentToRemember = rememberMatch[1]
+      
+      try {
+        const response = await fetch('/api/rag/remember', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            content: contentToRemember,
+            title: `Note from ${new Date().toLocaleDateString()}`,
+          }),
+        })
+        
+        if (response.ok) {
+          return `✅ Got it! I've saved that information to your knowledge base. You can ask me about it anytime.`
+        } else {
+          return `❌ I couldn't save that information. Make sure your Supabase credentials are configured.`
+        }
+      } catch (error) {
+        return `❌ Error saving information. Please check your RAG system configuration.`
+      }
+    }
+
     // Check for document-related queries (RAG)
     const ragKeywords = ['document', 'documents', 'uploaded', 'files', 'file', 'knowledge base', 'vault', 'what do i have', 'what documents', 'in my', 'from my'];
     const shouldUseRAG = ragKeywords.some(keyword => input.toLowerCase().includes(keyword));

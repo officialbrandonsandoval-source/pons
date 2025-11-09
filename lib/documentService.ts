@@ -64,7 +64,7 @@ export class DocumentService {
 
     switch (file.type) {
       case 'application/pdf':
-        throw new Error('PDF support coming soon. Please use TXT, MD, or JSON files for now.')
+        return await this.extractPDFText(buffer)
       
       case 'text/plain':
       case 'text/markdown':
@@ -74,8 +74,32 @@ export class DocumentService {
         return await this.extractJSONText(buffer)
       
       default:
-        throw new Error(`Unsupported file type: ${file.type}`)
+        // Try as plain text if type is unknown
+        try {
+          return await this.extractPlainText(buffer)
+        } catch {
+          throw new Error(`Unsupported file type: ${file.type}`)
+        }
     }
+  }
+
+  private async extractPDFText(buffer: ArrayBuffer): Promise<string> {
+    // Send to API route for server-side PDF parsing
+    const formData = new FormData()
+    const blob = new Blob([buffer], { type: 'application/pdf' })
+    formData.append('file', blob)
+
+    const response = await fetch('/api/rag/parse-pdf', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to parse PDF')
+    }
+
+    const data = await response.json()
+    return data.text
   }
 
   private async extractPlainText(buffer: ArrayBuffer): Promise<string> {

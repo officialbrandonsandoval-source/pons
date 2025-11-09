@@ -65,7 +65,11 @@ export async function ingestDocument(
 }
 
 export async function ragQuery(
-  query: string
+  query: string,
+  options?: {
+    maxResults?: number
+    filter?: Record<string, any>
+  }
 ): Promise<{
   answer: string
   sources: Array<{ content: string; metadata: any }>
@@ -74,17 +78,26 @@ export async function ragQuery(
     vectorStore = initializeRAG()
     if (!vectorStore) {
       return {
-        answer: 'RAG system not configured.',
+        answer: 'RAG system not configured. Please add Supabase credentials to use document search.',
         sources: [],
       }
     }
   }
 
-  const results = await vectorStore.similaritySearch(query, 4)
+  const { maxResults = 4 } = options || {}
+
+  const results = await vectorStore.similaritySearch(query, maxResults)
+
+  if (results.length === 0) {
+    return {
+      answer: 'No relevant documents found. Try uploading documents first or rephrase your question.',
+      sources: [],
+    }
+  }
 
   const context = results
-    .map((doc, i) => `[Source ${i + 1}] ${doc.pageContent}`)
-    .join('\n\n')
+    .map((doc, i) => `[Source ${i + 1}: ${doc.metadata.filename}]\n${doc.pageContent}`)
+    .join('\n\n---\n\n')
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -97,11 +110,11 @@ export async function ragQuery(
       messages: [
         {
           role: 'system',
-          content: 'Answer questions based on the context provided.',
+          content: 'You are a helpful assistant that answers questions based on provided document context. Always cite which source you\'re referencing. If the context doesn\'t contain the answer, say so clearly.',
         },
         {
           role: 'user',
-          content: `Context:\n\n${context}\n\nQuestion: ${query}`,
+          content: `Context from uploaded documents:\n\n${context}\n\nQuestion: ${query}\n\nPlease answer based on the context above and cite your sources.`,
         },
       ],
       temperature: 0.7,
@@ -109,7 +122,7 @@ export async function ragQuery(
   })
 
   const data = await response.json()
-  const answer = data.choices?.[0]?.message?.content || 'No answer'
+  const answer = data.choices?.[0]?.message?.content || 'No answer generated'
 
   return {
     answer,
@@ -118,6 +131,22 @@ export async function ragQuery(
       metadata: doc.metadata,
     })),
   }
+}
+
+/**
+ * Quick add - "Remember this" command
+ */
+export async function quickAdd(
+  content: string,
+  title?: string
+): Promise<void> {
+  const metadata = {
+    filename: title || `Quick Note - ${new Date().toLocaleDateString()}`,
+    type: 'note',
+    uploadedAt: new Date(),
+  }
+
+  await ingestDocument(content, metadata)
 }
 
 export async function searchDocuments(query: string): Promise<Array<{ content: string; metadata: any; score: number }>> {

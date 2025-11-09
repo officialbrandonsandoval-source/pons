@@ -74,11 +74,19 @@ export default function VaultPage() {
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-        Vault
+        📚 Knowledge Vault
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-8">
+      <p className="text-gray-600 dark:text-gray-400 mb-4">
         Upload documents for AI-powered search and Q&A
       </p>
+      
+      {/* Info Banner */}
+      <div className="bg-gradient-to-r from-sky-500/10 to-cyan-500/10 border border-sky-500/20 rounded-xl p-4 mb-6">
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          💡 <strong>How it works:</strong> Upload PDFs, documents, or notes. Ask questions in the Copilot or use the search below. 
+          Try saying <em>"Remember this: [your note]"</em> to quickly save information!
+        </p>
+      </div>
 
       {/* Upload Area */}
       <div
@@ -102,7 +110,7 @@ export default function VaultPage() {
           <input
             type="file"
             multiple
-            accept=".pdf,.txt,.md,.json"
+            accept=".pdf,.txt,.md,.json,.docx,.doc"
             onChange={handleFileInput}
             className="hidden"
             id="file-upload"
@@ -114,7 +122,7 @@ export default function VaultPage() {
             {uploading ? 'Uploading...' : 'Choose Files'}
           </label>
           <p className="text-xs text-gray-500 mt-2">
-            Supported: PDF, TXT, MD, JSON
+            Supported: PDF, TXT, MD, JSON, DOCX
           </p>
         </div>
       </div>
